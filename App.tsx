@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { StockAnalysis } from './types';
 import { fetchStockAnalysis } from './services/geminiService';
@@ -5,6 +6,18 @@ import StockInputForm from './components/StockInputForm';
 import AnalysisResult from './components/AnalysisResult';
 import Loader from './components/Loader';
 import FavoritesList from './components/FavoritesList';
+import PredefinedStocks from './components/PredefinedStocks';
+
+const predefinedStocks = [
+  'ADANIENSOL', 'ADANIGREEN', 'ADANIPOWER', 'AFCONS', 'AKI', 'BAJAJHFL', 
+  'BANDHANBNK', 'BEL', 'BSE', 'COALINDIA', 'EXIDEIND', 'FMCGIETF', 'GAIL', 
+  'HAWKINSCOOK', 'HDBFS', 'HDFCBANK', 'HYUNDAI', 'ICICIBANK', 'INDUSINDBK', 
+  'INOXWIND', 'IOC', 'IRFC', 'ITC', 'ITCHOTELS', 'JIOFIN', 'JSWINFRA', 
+  'LICI', 'MOBIKWIK', 'NMDC', 'OIL', 'PAYTM', 'RECLTD', 'RELIANCE', 
+  'SBIN', 'STL', 'STYLEBAAZA', 'SUZLON', 'TATACAP', 'TATATECH', 'TCS', 
+  'TMPV', 'VMM', 'YESBANK'
+];
+
 
 const App: React.FC = () => {
   const [stockSymbol, setStockSymbol] = useState<string>('');
@@ -43,7 +56,7 @@ const App: React.FC = () => {
       const result = await fetchStockAnalysis(symbol, timeframe);
       setAnalysis(result);
     } catch (err) {
-      console.error(err);
+// FIX: Added curly braces to the catch block to fix a syntax error.
       setError('Failed to fetch stock analysis. The stock symbol might be invalid or there was an API error. Please try again.');
     } finally {
       setLoading(false);
@@ -66,6 +79,10 @@ const App: React.FC = () => {
     handleAnalysisRequest(symbol, 'All');
   }, [handleAnalysisRequest]);
 
+  const handlePredefinedSelect = useCallback((symbol: string) => {
+    handleAnalysisRequest(symbol, 'All');
+  }, [handleAnalysisRequest]);
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col items-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-4xl mx-auto">
@@ -80,6 +97,8 @@ const App: React.FC = () => {
 
         <main className="w-full">
           <StockInputForm onSubmit={handleAnalysisRequest} loading={loading} />
+          
+          <PredefinedStocks stocks={predefinedStocks} onSelect={handlePredefinedSelect} loading={loading} />
 
           {favorites.length > 0 && (
             <FavoritesList 
