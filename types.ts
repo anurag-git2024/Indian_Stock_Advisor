@@ -18,9 +18,15 @@ export interface NewsArticle {
     summary: string;
 }
 
+export interface HistoricalDataPoint {
+    date: string; // "YYYY-MM-DD"
+    price: number;
+}
+
 export interface StockAnalysis {
     stock_name: string;
     current_price: string;
     analysis: TimeframeAnalysis[];
     top_news: NewsArticle[];
+    historical_data: HistoricalDataPoint[];
 }

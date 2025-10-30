@@ -1,18 +1,35 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { StockAnalysis } from './types';
 import { fetchStockAnalysis } from './services/geminiService';
 import StockInputForm from './components/StockInputForm';
 import AnalysisResult from './components/AnalysisResult';
 import Loader from './components/Loader';
+import FavoritesList from './components/FavoritesList';
 
 const App: React.FC = () => {
   const [stockSymbol, setStockSymbol] = useState<string>('');
   const [analysis, setAnalysis] = useState<StockAnalysis | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
-  const handleAnalysisRequest = useCallback(async (symbol: string) => {
+  useEffect(() => {
+    try {
+      const storedFavorites = localStorage.getItem('stockFavorites');
+      if (storedFavorites) {
+        setFavorites(JSON.parse(storedFavorites));
+      }
+    } catch (err) {
+      console.error("Failed to parse favorites from localStorage", err);
+      setFavorites([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('stockFavorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  const handleAnalysisRequest = useCallback(async (symbol: string, timeframe: string) => {
     if (!symbol) {
       setError('Please enter a stock symbol.');
       return;
@@ -23,7 +40,7 @@ const App: React.FC = () => {
     setStockSymbol(symbol.toUpperCase());
 
     try {
-      const result = await fetchStockAnalysis(symbol);
+      const result = await fetchStockAnalysis(symbol, timeframe);
       setAnalysis(result);
     } catch (err) {
       console.error(err);
@@ -32,6 +49,22 @@ const App: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  const handleToggleFavorite = useCallback((symbol: string) => {
+    setFavorites(prev => 
+      prev.includes(symbol)
+        ? prev.filter(s => s !== symbol)
+        : [...prev, symbol].sort()
+    );
+  }, []);
+
+  const handleRemoveFavorite = useCallback((symbol: string) => {
+    setFavorites(prev => prev.filter(s => s !== symbol));
+  }, []);
+
+  const handleSelectFavorite = useCallback((symbol: string) => {
+    handleAnalysisRequest(symbol, 'All');
+  }, [handleAnalysisRequest]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col items-center p-4 sm:p-6 lg:p-8">
@@ -48,6 +81,15 @@ const App: React.FC = () => {
         <main className="w-full">
           <StockInputForm onSubmit={handleAnalysisRequest} loading={loading} />
 
+          {favorites.length > 0 && (
+            <FavoritesList 
+              favorites={favorites}
+              onSelect={handleSelectFavorite}
+              onRemove={handleRemoveFavorite}
+              loading={loading}
+            />
+          )}
+
           {loading && <Loader />}
           
           {error && (
@@ -57,7 +99,14 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {analysis && <AnalysisResult data={analysis} />}
+          {analysis && (
+            <AnalysisResult 
+              data={analysis} 
+              stockSymbol={stockSymbol}
+              isFavorite={favorites.includes(stockSymbol)}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          )}
         </main>
         
         <footer className="text-center mt-12 text-gray-500 text-sm">
