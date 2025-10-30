@@ -21,7 +21,7 @@ const NewsSection: React.FC<NewsSectionProps> = ({ news }) => {
     });
   };
 
-  const SUMMARY_TRUNCATE_LENGTH = 120;
+  const SUMMARY_TRUNCATE_LENGTH = 120; // Used to determine if a toggle is needed
 
   return (
     <div className="mt-12">
@@ -50,11 +50,15 @@ const NewsSection: React.FC<NewsSectionProps> = ({ news }) => {
               </div>
               <p className="text-sm text-gray-500 font-semibold mb-2">{article.source}</p>
               <div className="text-gray-400 text-sm">
-                <p>
-                  {isTruncatable && !isExpanded
-                    ? `${article.summary.substring(0, SUMMARY_TRUNCATE_LENGTH)}...`
-                    : article.summary}
-                </p>
+                <div 
+                  className={`relative overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[1000px]' : 'max-h-24'}`}
+                >
+                  <p>
+                      {article.summary}
+                  </p>
+                  {/* Add a fade-out gradient when truncated to indicate more content */}
+                  {!isExpanded && isTruncatable && <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-gray-800 via-gray-800/80 to-transparent"></div>}
+                </div>
                 {isTruncatable && (
                   <button 
                     onClick={() => toggleArticleExpansion(index)} 
