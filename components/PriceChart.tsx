@@ -1,5 +1,5 @@
 import React from 'react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Brush } from 'recharts';
 import { HistoricalDataPoint } from '../types';
 
 interface PriceChartProps {
@@ -27,7 +27,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
   };
 
   return (
-    <div className="h-80 w-full bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+    <div className="h-96 w-full bg-gray-800/50 border border-gray-700 rounded-xl p-4">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={formattedData}
@@ -52,7 +52,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
             tickLine={false}
             axisLine={false}
             tickFormatter={(value) => `₹${value.toLocaleString('en-IN')}`}
-            domain={['dataMin - 10', 'dataMax + 10']}
+            domain={['auto', 'auto']}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend wrapperStyle={{ fontSize: '14px' }} />
@@ -61,10 +61,21 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
             dataKey="price" 
             stroke="#34D399" // green-400
             strokeWidth={2}
-            dot={{ r: 2, fill: '#34D399' }}
+            dot={false}
             activeDot={{ r: 6 }}
             name="Closing Price"
           />
+          <Brush 
+            dataKey="formattedDate" 
+            height={30} 
+            stroke="#34D399"
+            fill="rgba(31, 41, 55, 0.5)"
+          >
+            {/* The nested LineChart creates the preview inside the brush */}
+            <LineChart>
+                <Line type="monotone" dataKey="price" stroke="#34D399" dot={false} />
+            </LineChart>
+          </Brush>
         </LineChart>
       </ResponsiveContainer>
     </div>
