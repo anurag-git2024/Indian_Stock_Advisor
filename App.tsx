@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { StockAnalysis } from './types';
-import { fetchStockAnalysis } from './services/geminiService';
+import { StockAnalysis, TopPicks } from './types';
+import { fetchStockAnalysis, fetchTodaysPicks } from './services/geminiService';
 import StockInputForm from './components/StockInputForm';
 import AnalysisResult from './components/AnalysisResult';
 import Loader from './components/Loader';
 import FavoritesList from './components/FavoritesList';
 import PredefinedStocks from './components/PredefinedStocks';
+import TodayRecommendation from './components/TodayRecommendation';
 
 const predefinedStocks = [
   'ADANIENSOL', 'ADANIGREEN', 'ADANIPOWER', 'AFCONS', 'AKI', 'BAJAJHFL', 
@@ -24,6 +25,11 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
+
+  // New state for today's picks
+  const [topPicks, setTopPicks] = useState<TopPicks | null>(null);
+  const [topPicksLoading, setTopPicksLoading] = useState<boolean>(false);
+  const [topPicksError, setTopPicksError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -59,6 +65,21 @@ const App: React.FC = () => {
       setError('Failed to fetch stock analysis. The stock symbol might be invalid or there was an API error. Please try again.');
     } finally {
       setLoading(false);
+    }
+  }, []);
+  
+  // New handler for fetching top picks
+  const handleFetchTopPicks = useCallback(async () => {
+    setTopPicksLoading(true);
+    setTopPicksError(null);
+    setTopPicks(null);
+    try {
+      const result = await fetchTodaysPicks(predefinedStocks);
+      setTopPicks(result);
+    } catch (err) {
+      setTopPicksError("Failed to fetch today's top picks. Please try again later.");
+    } finally {
+      setTopPicksLoading(false);
     }
   }, []);
 
@@ -97,6 +118,15 @@ const App: React.FC = () => {
         <main className="w-full">
           <StockInputForm onSubmit={handleAnalysisRequest} loading={loading} />
           
+          <TodayRecommendation 
+            onFetchPicks={handleFetchTopPicks}
+            picks={topPicks}
+            loading={topPicksLoading}
+            error={topPicksError}
+            onAnalyze={handleSelectFavorite}
+            isAppLoading={loading}
+          />
+
           <PredefinedStocks stocks={predefinedStocks} onSelect={handlePredefinedSelect} loading={loading} />
 
           {favorites.length > 0 && (

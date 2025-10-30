@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { StockAnalysis } from '../types';
+import { StockAnalysis, TopPicks } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
@@ -94,5 +94,67 @@ export const fetchStockAnalysis = async (stockSymbol: string, timeframes: string
     } catch (error) {
         console.error("Error fetching or parsing stock analysis:", error);
         throw new Error("Failed to get analysis from Gemini API. The model may have returned an invalid format or the stock symbol is incorrect.");
+    }
+};
+
+export const fetchTodaysPicks = async (stockSymbols: string[]): Promise<TopPicks> => {
+    const prompt = `
+        You are an expert financial analyst AI specializing in the Indian stock market, with a focus on intraday trading.
+        Given the following list of Indian stock symbols: ${stockSymbols.join(', ')}.
+
+        Your task is to identify the single best stock to **BUY** and the single best stock to **SELL** for today's trading session.
+
+        To do this, you MUST perform a comprehensive, real-time analysis using Google Search to consult a variety of trusted feeds and data points, including:
+        1.  **Official Exchange Data:** Access the latest data from NSE (National Stock Exchange) and BSE (Bombay Stock Exchange) for pre-market indicators, volume, and price action.
+        2.  **Major Financial News Outlets:** Scour top Indian financial news sources like The Economic Times, Moneycontrol, Business Standard, and Livemint for breaking news, corporate announcements, and sector-specific trends that could impact these stocks today.
+        3.  **Technical Indicators:** Briefly analyze key short-term technical indicators such as RSI (Relative Strength Index), moving averages, and MACD (Moving Average Convergence Divergence) to gauge momentum.
+        4.  **Market Sentiment:** Assess the overall market sentiment for the day, considering global cues (e.g., US market performance) and domestic factors.
+
+        Based on this multi-faceted analysis, select one "buy" and one "sell" candidate.
+
+        Provide a concise, data-driven rationale (2-3 sentences) for each pick, referencing the specific factors (e.g., "strong volume on NSE," "positive news from Economic Times," "oversold RSI") that led to your decision.
+
+        Your entire response MUST be a single, raw, valid JSON object. Do not use markdown, do not wrap it in \`\`\`json ... \`\`\`, and do not include any explanatory text before or after the JSON.
+
+        The JSON object must have the following structure:
+        {
+          "buy": {
+            "symbol": "STOCKSYMBOL",
+            "stock_name": "Full Stock Name",
+            "rationale": "Brief, data-driven rationale for why this is a strong buy today, referencing specific data points."
+          },
+          "sell": {
+            "symbol": "STOCKSYMBOL",
+            "stock_name": "Full Stock Name",
+            "rationale": "Brief, data-driven rationale for why this is a strong sell today, referencing specific data points."
+          }
+        }
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: prompt,
+            config: {
+                tools: [{googleSearch: {}}],
+            },
+        });
+
+        let jsonText = response.text.trim();
+        if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.substring(7, jsonText.length - 3).trim();
+        }
+
+        const parsedData = JSON.parse(jsonText) as TopPicks;
+
+        if (!parsedData.buy || !parsedData.sell || !parsedData.buy.symbol || !parsedData.sell.symbol) {
+            throw new Error("Invalid data structure for top picks received from API.");
+        }
+
+        return parsedData;
+
+    } catch (error) {
+        console.error("Error fetching or parsing today's top picks:", error);
+        throw new Error("Failed to get today's top picks from Gemini API.");
     }
 };

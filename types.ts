@@ -30,3 +30,14 @@ export interface StockAnalysis {
     top_news: NewsArticle[];
     historical_data: HistoricalDataPoint[];
 }
+
+export interface TodaysPick {
+  symbol: string;
+  stock_name: string;
+  rationale: string;
+}
+
+export interface TopPicks {
+  buy: TodaysPick;
+  sell: TodaysPick;
+}

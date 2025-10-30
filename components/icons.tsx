@@ -59,3 +59,9 @@ export const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12.548 0A48.108 48.108 0 016.25 5.393m0 0a48.068 48.068 0 0111.5 0" />
     </svg>
 );
+
+export const LightBulbIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.311V21m-3.75 0h4.5m-7.5 0h7.5c-1.12 0-2.066-.914-2.066-2.066s.934-2.066 2.066-2.066h.085a2.066 2.066 0 002.066-2.066v-1.5a2.066 2.066 0 00-2.066-2.066H12a2.066 2.066 0 00-2.066 2.066v1.5a2.066 2.066 0 002.066 2.066h.085" />
+    </svg>
+);
