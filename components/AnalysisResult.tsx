@@ -38,7 +38,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, stockSymbol, isFa
       {data.historical_data && data.historical_data.length > 0 && (
         <div className="mb-12">
             <h3 className="text-2xl font-bold text-center mb-4">30-Day Price History</h3>
-            <PriceChart data={data.historical_data} />
+            <PriceChart data={data.historical_data} analysis={data.analysis} />
         </div>
       )}
 

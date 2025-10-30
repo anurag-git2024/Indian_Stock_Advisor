@@ -4,17 +4,31 @@ import { StockAnalysis } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
-export const fetchStockAnalysis = async (stockSymbol: string, timeframe: string): Promise<StockAnalysis> => {
+export const fetchStockAnalysis = async (stockSymbol: string, timeframes: string[]): Promise<StockAnalysis> => {
 
-    const analysisPromptPart = timeframe === 'All'
-        ? `2. A comprehensive analysis with buy/sell/hold recommendations for 'Intraday', '1 Week', and '1 Month' timeframes. Each recommendation must include a price target and a data-driven rationale.`
-        : `2. A comprehensive analysis with a buy/sell/hold recommendation for the '${timeframe}' timeframe. The recommendation must include a price target and a data-driven rationale.`;
+    const requestedTimeframes = (timeframes.length === 1 && timeframes[0] === 'All')
+        ? ['Intraday', '1 Week', '1 Month', '6 Months', '1 Year', '2 Years']
+        : timeframes;
+
+    // FIX: Replaced Intl.ListFormat with a manual implementation to fix "Property 'ListFormat' does not exist on type 'typeof Intl'" error.
+    const quotedTimeframes = requestedTimeframes.map(t => `'${t}'`);
+    let formattedTimeframeList: string;
+    if (quotedTimeframes.length === 1) {
+        formattedTimeframeList = quotedTimeframes[0];
+    } else if (quotedTimeframes.length === 2) {
+        formattedTimeframeList = quotedTimeframes.join(' and ');
+    } else {
+        formattedTimeframeList = `${quotedTimeframes.slice(0, -1).join(', ')}, and ${quotedTimeframes[quotedTimeframes.length - 1]}`;
+    }
+
+
+    const analysisPromptPart = `2. A comprehensive analysis with buy/sell/hold recommendations for the following timeframe(s): ${formattedTimeframeList}. For each timeframe, provide a recommendation, a price target, and a data-driven rationale.`;
 
     const prompt = `
-        You are an expert financial analyst AI specializing in the Indian stock market.
+        You are an expert financial analyst AI specializing in the Indian stock market. Your analysis must be grounded in real-time data from official sources like the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE).
         Your task is to provide a detailed analysis for the stock with the symbol: "${stockSymbol}".
-        Using real-time data from Google Search, you must provide:
-        1. The latest available stock price, formatted as a string (e.g., "₹XX,XXX.XX").
+        Using real-time data from Google Search to access official NSE/BSE feeds and other reputable financial news sources, you must provide:
+        1. The latest available stock price, formatted as a string (e.g., "₹XX,XXX.XX"). Ensure this reflects the most recent trading data from NSE or BSE.
         ${analysisPromptPart}
         3. A list of the top 3-5 most recent and relevant news articles. Each article must include a title, source, URL, and a brief summary.
         4. Historical closing price data for the last 30 trading days. This should be an array of objects, each containing a 'date' (formatted as "YYYY-MM-DD") and a 'price' (as a number, not a string).
@@ -27,11 +41,12 @@ export const fetchStockAnalysis = async (stockSymbol: string, timeframe: string)
           "current_price": "₹XX,XXX.XX",
           "analysis": [
             {
-              "timeframe": "${timeframe === 'All' ? 'Intraday' : timeframe}",
+              "timeframe": "${requestedTimeframes[0]}",
               "recommendation": "Buy" | "Sell" | "Hold",
               "price_target": "₹XX,XXX.XX",
-              "rationale": "Concise rationale..."
+              "rationale": "Concise rationale based on NSE/BSE data, technical indicators, and market sentiment..."
             }
+            // ... include one object in this array for EACH of the requested timeframes
           ],
           "top_news": [
             {

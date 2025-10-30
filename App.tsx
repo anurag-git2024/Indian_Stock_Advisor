@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { StockAnalysis } from './types';
 import { fetchStockAnalysis } from './services/geminiService';
@@ -42,7 +41,7 @@ const App: React.FC = () => {
     localStorage.setItem('stockFavorites', JSON.stringify(favorites));
   }, [favorites]);
 
-  const handleAnalysisRequest = useCallback(async (symbol: string, timeframe: string) => {
+  const handleAnalysisRequest = useCallback(async (symbol: string, timeframes: string[]) => {
     if (!symbol) {
       setError('Please enter a stock symbol.');
       return;
@@ -53,7 +52,7 @@ const App: React.FC = () => {
     setStockSymbol(symbol.toUpperCase());
 
     try {
-      const result = await fetchStockAnalysis(symbol, timeframe);
+      const result = await fetchStockAnalysis(symbol, timeframes);
       setAnalysis(result);
     } catch (err) {
 // FIX: Added curly braces to the catch block to fix a syntax error.
@@ -76,11 +75,11 @@ const App: React.FC = () => {
   }, []);
 
   const handleSelectFavorite = useCallback((symbol: string) => {
-    handleAnalysisRequest(symbol, 'All');
+    handleAnalysisRequest(symbol, ['All']);
   }, [handleAnalysisRequest]);
 
   const handlePredefinedSelect = useCallback((symbol: string) => {
-    handleAnalysisRequest(symbol, 'All');
+    handleAnalysisRequest(symbol, ['All']);
   }, [handleAnalysisRequest]);
 
   return (
@@ -91,7 +90,7 @@ const App: React.FC = () => {
             Indian Stock Advisor AI
           </h1>
           <p className="text-gray-400">
-            Enter an Indian stock symbol (e.g., RELIANCE, TCS, INFY) to get an AI-powered analysis.
+            Get AI-powered analysis for Indian stocks using real-time data from NSE and BSE.
           </p>
         </header>
 

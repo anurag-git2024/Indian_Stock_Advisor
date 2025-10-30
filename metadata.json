@@ -1,5 +1,5 @@
 {
   "name": "Indian Stock Advisor",
-  "description": "An AI-powered application that provides buy/sell/hold recommendations for Indian stocks for daily, weekly, and monthly timeframes, including price targets and a detailed rationale based on simulated deep research.",
+  "description": "An AI-powered application that provides buy/sell/hold recommendations for Indian stocks. It uses real-time data from NSE and BSE to generate price targets and a detailed rationale for multiple timeframes.",
   "requestFramePermissions": []
 }
