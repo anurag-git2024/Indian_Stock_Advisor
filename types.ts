@@ -26,6 +26,8 @@ export interface HistoricalDataPoint {
 export interface StockAnalysis {
     stock_name: string;
     current_price: string;
+    fifty_two_week_high: string;
+    fifty_two_week_low: string;
     analysis: TimeframeAnalysis[];
     top_news: NewsArticle[];
     historical_data: HistoricalDataPoint[];
@@ -40,4 +42,12 @@ export interface TodaysPick {
 export interface TopPicks {
   buy: TodaysPick;
   sell: TodaysPick;
+}
+
+export interface PriceAlert {
+  id: string;
+  symbol: string;
+  targetPrice: number;
+  condition: 'above' | 'below';
+  status: 'active' | 'triggered';
 }

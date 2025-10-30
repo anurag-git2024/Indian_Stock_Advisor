@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { StockAnalysis, TopPicks } from './types';
+import { StockAnalysis, TopPicks, PriceAlert } from './types';
 import { fetchStockAnalysis, fetchTodaysPicks } from './services/geminiService';
 import StockInputForm from './components/StockInputForm';
 import AnalysisResult from './components/AnalysisResult';
@@ -7,6 +7,8 @@ import Loader from './components/Loader';
 import FavoritesList from './components/FavoritesList';
 import PredefinedStocks from './components/PredefinedStocks';
 import TodayRecommendation from './components/TodayRecommendation';
+import AlertsList from './components/AlertsList';
+import TriggeredAlertDialog from './components/TriggeredAlertDialog';
 
 const predefinedStocks = [
   'ADANIENSOL', 'ADANIGREEN', 'ADANIPOWER', 'AFCONS', 'AKI', 'BAJAJHFL', 
@@ -18,6 +20,10 @@ const predefinedStocks = [
   'TMPV', 'VMM', 'YESBANK'
 ];
 
+interface TriggeredAlertInfo {
+  alert: PriceAlert;
+  triggeringPrice: string;
+}
 
 const App: React.FC = () => {
   const [stockSymbol, setStockSymbol] = useState<string>('');
@@ -26,10 +32,12 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  // New state for today's picks
   const [topPicks, setTopPicks] = useState<TopPicks | null>(null);
   const [topPicksLoading, setTopPicksLoading] = useState<boolean>(false);
   const [topPicksError, setTopPicksError] = useState<string | null>(null);
+
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [triggeredAlertQueue, setTriggeredAlertQueue] = useState<TriggeredAlertInfo[]>([]);
 
   useEffect(() => {
     try {
@@ -37,15 +45,39 @@ const App: React.FC = () => {
       if (storedFavorites) {
         setFavorites(JSON.parse(storedFavorites));
       }
+      const storedAlerts = localStorage.getItem('stockAlerts');
+      if (storedAlerts) {
+        setAlerts(JSON.parse(storedAlerts));
+      }
     } catch (err) {
-      console.error("Failed to parse favorites from localStorage", err);
-      setFavorites([]);
+      console.error("Failed to parse from localStorage", err);
     }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('stockFavorites', JSON.stringify(favorites));
   }, [favorites]);
+
+  useEffect(() => {
+    localStorage.setItem('stockAlerts', JSON.stringify(alerts));
+  }, [alerts]);
+
+  const handleAddAlert = useCallback((newAlertData: Omit<PriceAlert, 'id' | 'status'>) => {
+    const newAlert: PriceAlert = {
+      ...newAlertData,
+      id: `${newAlertData.symbol}-${Date.now()}`,
+      status: 'active',
+    };
+    setAlerts(prev => [...prev, newAlert]);
+  }, []);
+
+  const handleRemoveAlert = useCallback((id: string) => {
+    setAlerts(prev => prev.filter(alert => alert.id !== id));
+  }, []);
+
+  const handleDismissTriggeredAlert = useCallback((id: string) => {
+    setTriggeredAlertQueue(prev => prev.filter(info => info.alert.id !== id));
+  }, []);
 
   const handleAnalysisRequest = useCallback(async (symbol: string, timeframes: string[]) => {
     if (!symbol) {
@@ -55,20 +87,50 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     setAnalysis(null);
-    setStockSymbol(symbol.toUpperCase());
+    const upperSymbol = symbol.toUpperCase();
+    setStockSymbol(upperSymbol);
 
     try {
       const result = await fetchStockAnalysis(symbol, timeframes);
       setAnalysis(result);
+
+      const currentPriceStr = result.current_price.replace(/[₹,]/g, '');
+      const currentPrice = parseFloat(currentPriceStr);
+
+      if (!isNaN(currentPrice)) {
+          const newlyTriggered: PriceAlert[] = [];
+          const updatedAlerts = alerts.map(alert => {
+              if (alert.symbol === upperSymbol && alert.status === 'active') {
+                  const isTriggered = 
+                      (alert.condition === 'above' && currentPrice >= alert.targetPrice) ||
+                      (alert.condition === 'below' && currentPrice <= alert.targetPrice);
+
+                  if (isTriggered) {
+                      const triggeredAlert = { ...alert, status: 'triggered' as const };
+                      newlyTriggered.push(triggeredAlert);
+                      return triggeredAlert;
+                  }
+              }
+              return alert;
+          });
+
+          if (newlyTriggered.length > 0) {
+              const newQueueItems = newlyTriggered.map(alert => ({
+                  alert,
+                  triggeringPrice: result.current_price,
+              }));
+              setAlerts(updatedAlerts);
+              setTriggeredAlertQueue(prev => [...prev, ...newQueueItems]);
+          }
+      }
+
     } catch (err) {
-// FIX: Added curly braces to the catch block to fix a syntax error.
       setError('Failed to fetch stock analysis. The stock symbol might be invalid or there was an API error. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [alerts]);
   
-  // New handler for fetching top picks
   const handleFetchTopPicks = useCallback(async () => {
     setTopPicksLoading(true);
     setTopPicksError(null);
@@ -105,6 +167,14 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col items-center p-4 sm:p-6 lg:p-8">
+      {triggeredAlertQueue.length > 0 && (
+          <TriggeredAlertDialog 
+              alert={triggeredAlertQueue[0].alert}
+              currentPrice={triggeredAlertQueue[0].triggeringPrice}
+              onDismiss={handleDismissTriggeredAlert}
+          />
+      )}
+
       <div className="w-full max-w-4xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-2">
@@ -138,6 +208,12 @@ const App: React.FC = () => {
             />
           )}
 
+          <AlertsList
+            alerts={alerts}
+            onRemove={handleRemoveAlert}
+            loading={loading}
+          />
+
           {loading && <Loader />}
           
           {error && (
@@ -153,6 +229,7 @@ const App: React.FC = () => {
               stockSymbol={stockSymbol}
               isFavorite={favorites.includes(stockSymbol)}
               onToggleFavorite={handleToggleFavorite}
+              onSetAlert={handleAddAlert}
             />
           )}
         </main>

@@ -10,7 +10,6 @@ export const fetchStockAnalysis = async (stockSymbol: string, timeframes: string
         ? ['Intraday', '1 Week', '1 Month', '6 Months', '1 Year', '2 Years']
         : timeframes;
 
-    // FIX: Replaced Intl.ListFormat with a manual implementation to fix "Property 'ListFormat' does not exist on type 'typeof Intl'" error.
     const quotedTimeframes = requestedTimeframes.map(t => `'${t}'`);
     let formattedTimeframeList: string;
     if (quotedTimeframes.length === 1) {
@@ -22,16 +21,17 @@ export const fetchStockAnalysis = async (stockSymbol: string, timeframes: string
     }
 
 
-    const analysisPromptPart = `2. A comprehensive analysis with buy/sell/hold recommendations for the following timeframe(s): ${formattedTimeframeList}. For each timeframe, provide a recommendation, a price target, and a data-driven rationale.`;
+    const analysisPromptPart = `3. A comprehensive analysis with buy/sell/hold recommendations for the following timeframe(s): ${formattedTimeframeList}. For each timeframe, provide a recommendation, a price target, and a data-driven rationale.`;
 
     const prompt = `
         You are an expert financial analyst AI specializing in the Indian stock market. Your analysis must be grounded in real-time data from official sources like the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE).
         Your task is to provide a detailed analysis for the stock with the symbol: "${stockSymbol}".
         Using real-time data from Google Search to access official NSE/BSE feeds and other reputable financial news sources, you must provide:
-        1. The latest available stock price, formatted as a string (e.g., "₹XX,XXX.XX"). Ensure this reflects the most recent trading data from NSE or BSE.
+        1. The latest available stock price, formatted as a string (e.g., "₹XX,XXX.XX").
+        2. The 52-week high and 52-week low prices, formatted as strings.
         ${analysisPromptPart}
-        3. A list of the top 3-5 most recent and relevant news articles. Each article must include a title, source, URL, and a brief summary.
-        4. Historical closing price data for the last 30 trading days. This should be an array of objects, each containing a 'date' (formatted as "YYYY-MM-DD") and a 'price' (as a number, not a string).
+        4. A list of the top 3-5 most recent and relevant news articles. Each article must include a title, source, URL, and a brief summary.
+        5. Historical closing price data for the last 30 trading days. This should be an array of objects, each containing a 'date' (formatted as "YYYY-MM-DD") and a 'price' (as a number, not a string).
 
         Your entire response MUST be a single, raw, valid JSON object. Do not use markdown, do not wrap it in \`\`\`json ... \`\`\`, and do not include any explanatory text before or after the JSON.
 
@@ -39,6 +39,8 @@ export const fetchStockAnalysis = async (stockSymbol: string, timeframes: string
         {
           "stock_name": "Full Name of the Stock",
           "current_price": "₹XX,XXX.XX",
+          "fifty_two_week_high": "₹XX,XXX.XX",
+          "fifty_two_week_low": "₹XX,XXX.XX",
           "analysis": [
             {
               "timeframe": "${requestedTimeframes[0]}",
@@ -85,7 +87,7 @@ export const fetchStockAnalysis = async (stockSymbol: string, timeframes: string
         
         const parsedData = JSON.parse(jsonText) as StockAnalysis;
         
-        if (!parsedData.stock_name || !parsedData.current_price || !Array.isArray(parsedData.analysis) || !Array.isArray(parsedData.top_news) || !Array.isArray(parsedData.historical_data)) {
+        if (!parsedData.stock_name || !parsedData.current_price || !parsedData.fifty_two_week_high || !parsedData.fifty_two_week_low || !Array.isArray(parsedData.analysis) || !Array.isArray(parsedData.top_news) || !Array.isArray(parsedData.historical_data)) {
             throw new Error("Invalid data structure received from API.");
         }
 
