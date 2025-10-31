@@ -9,6 +9,8 @@ import PredefinedStocks from './components/PredefinedStocks';
 import TodayRecommendation from './components/TodayRecommendation';
 import AlertsList from './components/AlertsList';
 import TriggeredAlertDialog from './components/TriggeredAlertDialog';
+import ComparisonTray from './components/ComparisonTray';
+import ComparisonView from './components/ComparisonView';
 
 const predefinedStocks = [
   'ADANIENSOL', 'ADANIGREEN', 'ADANIPOWER', 'AFCONS', 'AKI', 'BAJAJHFL', 
@@ -38,17 +40,24 @@ const App: React.FC = () => {
 
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [triggeredAlertQueue, setTriggeredAlertQueue] = useState<TriggeredAlertInfo[]>([]);
+  
+  // State for comparison feature
+  const [comparisonList, setComparisonList] = useState<string[]>([]);
+  const [comparisonData, setComparisonData] = useState<StockAnalysis[]>([]);
+  const [comparisonLoading, setComparisonLoading] = useState<boolean>(false);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
+  const [showComparisonView, setShowComparisonView] = useState<boolean>(false);
 
   useEffect(() => {
     try {
       const storedFavorites = localStorage.getItem('stockFavorites');
-      if (storedFavorites) {
-        setFavorites(JSON.parse(storedFavorites));
-      }
+      if (storedFavorites) setFavorites(JSON.parse(storedFavorites));
+      
       const storedAlerts = localStorage.getItem('stockAlerts');
-      if (storedAlerts) {
-        setAlerts(JSON.parse(storedAlerts));
-      }
+      if (storedAlerts) setAlerts(JSON.parse(storedAlerts));
+
+      const storedComparisonList = localStorage.getItem('stockComparisonList');
+      if (storedComparisonList) setComparisonList(JSON.parse(storedComparisonList));
     } catch (err) {
       console.error("Failed to parse from localStorage", err);
     }
@@ -61,6 +70,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('stockAlerts', JSON.stringify(alerts));
   }, [alerts]);
+  
+  useEffect(() => {
+    localStorage.setItem('stockComparisonList', JSON.stringify(comparisonList));
+  }, [comparisonList]);
 
   const handleAddAlert = useCallback((newAlertData: Omit<PriceAlert, 'id' | 'status'>) => {
     const newAlert: PriceAlert = {
@@ -84,6 +97,10 @@ const App: React.FC = () => {
       setError('Please enter a stock symbol.');
       return;
     }
+    // Exit comparison view when a single analysis is requested
+    setShowComparisonView(false);
+    setComparisonData([]);
+    
     setLoading(true);
     setError(null);
     setAnalysis(null);
@@ -92,7 +109,7 @@ const App: React.FC = () => {
 
     try {
       const result = await fetchStockAnalysis(symbol, timeframes);
-      setAnalysis(result);
+      setAnalysis({ ...result, symbol: upperSymbol });
 
       const currentPriceStr = result.current_price.replace(/[₹,]/g, '');
       const currentPrice = parseFloat(currentPriceStr);
@@ -164,6 +181,56 @@ const App: React.FC = () => {
   const handlePredefinedSelect = useCallback((symbol: string) => {
     handleAnalysisRequest(symbol, ['All']);
   }, [handleAnalysisRequest]);
+  
+  // Comparison Handlers
+  const handleAddToComparison = useCallback((symbol: string) => {
+    setComparisonList(prev => {
+      if (prev.includes(symbol) || prev.length >= 3) {
+        return prev;
+      }
+      return [...prev, symbol];
+    });
+  }, []);
+
+  const handleRemoveFromComparison = useCallback((symbol: string) => {
+    setComparisonList(prev => prev.filter(s => s !== symbol));
+  }, []);
+
+  const handleClearComparison = useCallback(() => {
+    setComparisonList([]);
+  }, []);
+
+  const handleInitiateComparison = useCallback(async () => {
+    if (comparisonList.length < 2) return;
+    setComparisonLoading(true);
+    setComparisonError(null);
+    setAnalysis(null);
+    setError(null);
+    setShowComparisonView(true);
+    setComparisonData([]);
+
+    try {
+      const results = await Promise.all(
+        comparisonList.map(async (symbol) => {
+          const analysis = await fetchStockAnalysis(symbol, ['All']);
+          return { ...analysis, symbol };
+        })
+      );
+      setComparisonData(results);
+    } catch (err) {
+      setComparisonError('Failed to fetch comparison data for one or more stocks. Please try again.');
+      setShowComparisonView(false);
+    } finally {
+      setComparisonLoading(false);
+    }
+  }, [comparisonList]);
+
+  const handleExitComparisonView = useCallback(() => {
+    setShowComparisonView(false);
+    setComparisonData([]);
+    setComparisonError(null);
+  }, []);
+
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col items-center p-4 sm:p-6 lg:p-8">
@@ -175,7 +242,7 @@ const App: React.FC = () => {
           />
       )}
 
-      <div className="w-full max-w-4xl mx-auto">
+      <div className="w-full max-w-5xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-2">
             Indian Stock Advisor AI
@@ -184,60 +251,96 @@ const App: React.FC = () => {
             Get AI-powered analysis for Indian stocks using real-time data from NSE and BSE.
           </p>
         </header>
+        
+        {showComparisonView ? (
+          <>
+            {comparisonLoading && <Loader />}
+            {comparisonError && (
+              <div className="mt-8 text-center bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg" role="alert">
+                <strong className="font-bold">Error: </strong>
+                <span className="block sm:inline">{comparisonError}</span>
+              </div>
+            )}
+            {comparisonData.length > 0 && !comparisonLoading && (
+              <ComparisonView analyses={comparisonData} onBack={handleExitComparisonView} />
+            )}
+          </>
+        ) : (
+          <main className="w-full">
+            <StockInputForm onSubmit={handleAnalysisRequest} loading={loading} />
+            
+            <TodayRecommendation 
+              onFetchPicks={handleFetchTopPicks}
+              picks={topPicks}
+              loading={topPicksLoading}
+              error={topPicksError}
+              onAnalyze={handleSelectFavorite}
+              isAppLoading={loading}
+              onAddToComparison={handleAddToComparison}
+              comparisonList={comparisonList}
+            />
 
-        <main className="w-full">
-          <StockInputForm onSubmit={handleAnalysisRequest} loading={loading} />
-          
-          <TodayRecommendation 
-            onFetchPicks={handleFetchTopPicks}
-            picks={topPicks}
-            loading={topPicksLoading}
-            error={topPicksError}
-            onAnalyze={handleSelectFavorite}
-            isAppLoading={loading}
-          />
+            <PredefinedStocks 
+              stocks={predefinedStocks} 
+              onSelect={handlePredefinedSelect} 
+              loading={loading}
+              onAddToComparison={handleAddToComparison}
+              comparisonList={comparisonList}
+            />
 
-          <PredefinedStocks stocks={predefinedStocks} onSelect={handlePredefinedSelect} loading={loading} />
+            {favorites.length > 0 && (
+              <FavoritesList 
+                favorites={favorites}
+                onSelect={handleSelectFavorite}
+                onRemove={handleRemoveFavorite}
+                loading={loading}
+                onAddToComparison={handleAddToComparison}
+                comparisonList={comparisonList}
+              />
+            )}
 
-          {favorites.length > 0 && (
-            <FavoritesList 
-              favorites={favorites}
-              onSelect={handleSelectFavorite}
-              onRemove={handleRemoveFavorite}
+            <AlertsList
+              alerts={alerts}
+              onRemove={handleRemoveAlert}
               loading={loading}
             />
-          )}
 
-          <AlertsList
-            alerts={alerts}
-            onRemove={handleRemoveAlert}
-            loading={loading}
-          />
+            {loading && <Loader />}
+            
+            {error && (
+              <div className="mt-8 text-center bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg" role="alert">
+                <strong className="font-bold">Error: </strong>
+                <span className="block sm:inline">{error}</span>
+              </div>
+            )}
 
-          {loading && <Loader />}
-          
-          {error && (
-            <div className="mt-8 text-center bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg" role="alert">
-              <strong className="font-bold">Error: </strong>
-              <span className="block sm:inline">{error}</span>
-            </div>
-          )}
-
-          {analysis && (
-            <AnalysisResult 
-              data={analysis} 
-              stockSymbol={stockSymbol}
-              isFavorite={favorites.includes(stockSymbol)}
-              onToggleFavorite={handleToggleFavorite}
-              onSetAlert={handleAddAlert}
-            />
-          )}
-        </main>
+            {analysis && (
+              <AnalysisResult 
+                data={analysis} 
+                stockSymbol={stockSymbol}
+                isFavorite={favorites.includes(stockSymbol)}
+                onToggleFavorite={handleToggleFavorite}
+                onSetAlert={handleAddAlert}
+                onAddToComparison={handleAddToComparison}
+                isInComparison={comparisonList.includes(stockSymbol)}
+              />
+            )}
+          </main>
+        )}
         
         <footer className="text-center mt-12 text-gray-500 text-sm">
           <p>Disclaimer: The analysis provided is generated by an AI model and is for informational purposes only. It does not constitute financial advice. Always conduct your own research before making any investment decisions.</p>
         </footer>
       </div>
+
+       <ComparisonTray 
+        comparisonList={comparisonList}
+        onRemove={handleRemoveFromComparison}
+        onClear={handleClearComparison}
+        onCompare={handleInitiateComparison}
+        loading={comparisonLoading}
+        appLoading={loading}
+      />
     </div>
   );
 };

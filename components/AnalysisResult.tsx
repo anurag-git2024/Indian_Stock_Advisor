@@ -3,7 +3,7 @@ import { StockAnalysis, PriceAlert, TimeframeAnalysis, RecommendationType } from
 import RecommendationCard from './RecommendationCard';
 import NewsSection from './NewsSection';
 import PriceChart from './PriceChart';
-import { StarIcon, StarOutlineIcon, TrendUpIcon, TrendDownIcon, MinusCircleIcon, DownloadIcon } from './icons';
+import { StarIcon, StarOutlineIcon, TrendUpIcon, TrendDownIcon, MinusCircleIcon, DownloadIcon, PlusCircleIcon } from './icons';
 import PriceAlertForm from './PriceAlertForm';
 
 // TypeScript declaration for jsPDF globals loaded from script tags
@@ -75,9 +75,11 @@ interface AnalysisResultProps {
   isFavorite: boolean;
   onToggleFavorite: (symbol: string) => void;
   onSetAlert: (alert: Omit<PriceAlert, 'id' | 'status'>) => void;
+  onAddToComparison: (symbol: string) => void;
+  isInComparison: boolean;
 }
 
-const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, stockSymbol, isFavorite, onToggleFavorite, onSetAlert }) => {
+const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, stockSymbol, isFavorite, onToggleFavorite, onSetAlert, onAddToComparison, isInComparison }) => {
   const [isExporting, setIsExporting] = useState(false);
   const currentPriceNumber = parseFloat(data.current_price.replace(/[₹,]/g, ''));
   
@@ -207,6 +209,15 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, stockSymbol, isFa
                 title={isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
             >
                 {isFavorite ? <StarIcon className="h-8 w-8" /> : <StarOutlineIcon className="h-8 w-8" />}
+            </button>
+            <button
+                onClick={() => onAddToComparison(stockSymbol)}
+                disabled={isInComparison}
+                className="text-blue-400 hover:text-blue-300 transition-transform duration-200 hover:scale-125 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full disabled:text-gray-500 disabled:cursor-not-allowed disabled:scale-100"
+                aria-label={isInComparison ? `${stockSymbol} is in comparison list` : `Add ${stockSymbol} to comparison`}
+                title={isInComparison ? 'In Comparison List' : 'Add to Compare'}
+            >
+                <PlusCircleIcon className="h-8 w-8" />
             </button>
             <button
                 onClick={handleExportPDF}

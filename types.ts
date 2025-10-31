@@ -24,6 +24,7 @@ export interface HistoricalDataPoint {
 }
 
 export interface StockAnalysis {
+    symbol?: string;
     stock_name: string;
     current_price: string;
     fifty_two_week_high: string;
