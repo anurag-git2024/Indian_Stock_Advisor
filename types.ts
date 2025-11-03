@@ -45,6 +45,24 @@ export interface TopPicks {
   sell: TodaysPick;
 }
 
+export enum MarketSentiment {
+    POSITIVE = 'Positive',
+    NEGATIVE = 'Negative',
+    NEUTRAL = 'Neutral',
+}
+
+export interface MarketFeedItem {
+    title: string;
+    summary: string;
+    source: string;
+    sentiment: MarketSentiment;
+    timestamp: string;
+}
+
+export interface MarketFeedData {
+    feed: MarketFeedItem[];
+}
+
 export interface PriceAlert {
   id: string;
   symbol: string;

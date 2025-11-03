@@ -41,13 +41,12 @@ const App: React.FC = () => {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [triggeredAlertQueue, setTriggeredAlertQueue] = useState<TriggeredAlertInfo[]>([]);
   
-  // State for comparison feature
   const [comparisonList, setComparisonList] = useState<string[]>([]);
   const [comparisonData, setComparisonData] = useState<StockAnalysis[]>([]);
   const [comparisonLoading, setComparisonLoading] = useState<boolean>(false);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [showComparisonView, setShowComparisonView] = useState<boolean>(false);
-
+  
   useEffect(() => {
     try {
       const storedFavorites = localStorage.getItem('stockFavorites');
@@ -97,7 +96,6 @@ const App: React.FC = () => {
       setError('Please enter a stock symbol.');
       return;
     }
-    // Exit comparison view when a single analysis is requested
     setShowComparisonView(false);
     setComparisonData([]);
     
@@ -182,8 +180,7 @@ const App: React.FC = () => {
     handleAnalysisRequest(symbol, ['All']);
   }, [handleAnalysisRequest]);
   
-  // Comparison Handlers
-  const handleAddToComparison = useCallback((symbol: string) => {
+  const handleAddToComparison = useCallback((symbol:string) => {
     setComparisonList(prev => {
       if (prev.includes(symbol) || prev.length >= 3) {
         return prev;
